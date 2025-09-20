@@ -5,12 +5,15 @@ import (
 	"testing"
 )
 
-//
 type Fish struct {
 	Type string `json:"type"`
 }
 
-//
+// Testing json.MarshalIndent error
+type Unmarshalable struct {
+	Ch chan struct{}
+}
+
 var (
 	db         *Driver
 	database   = "./deep/school"
@@ -21,7 +24,6 @@ var (
 	bluefish   = Fish{Type: "blue"}
 )
 
-//
 func TestMain(m *testing.M) {
 
 	// remove any thing for a potentially failed previous test
@@ -62,7 +64,6 @@ func TestNew(t *testing.T) {
 	}
 }
 
-//
 func TestWriteAndRead(t *testing.T) {
 
 	createDB()
@@ -85,7 +86,6 @@ func TestWriteAndRead(t *testing.T) {
 	destroySchool()
 }
 
-//
 func TestReadall(t *testing.T) {
 
 	createDB()
@@ -103,7 +103,20 @@ func TestReadall(t *testing.T) {
 	destroySchool()
 }
 
-//
+// Testing reading all from a collection that does not exist.
+func TestReadAll_NonExistentCollection(t *testing.T) {
+	createDB()
+
+	// Be sure the collection does not exist
+	os.RemoveAll(db.dir + "/nonexistentcollection")
+
+	_, err := db.ReadAll("nonexistentcollection")
+	if err == nil {
+		t.Error("Expected error when reading from non-existent collection, got nil")
+	}
+	destroySchool()
+}
+
 func TestWriteAndReadEmpty(t *testing.T) {
 
 	createDB()
@@ -126,7 +139,50 @@ func TestWriteAndReadEmpty(t *testing.T) {
 	destroySchool()
 }
 
-//
+// Testing that write returns an error when json.MarshalIndent fails.
+func TestWrite_MarshalError(t *testing.T) {
+	createDB()
+
+	unmarshalable := Unmarshalable{}
+	if err := db.Write(collection, "unmarshalable", unmarshalable); err == nil {
+		t.Error("Expected error when marshalling unmarshalable type, got nil")
+	}
+	destroySchool()
+}
+
+// Testing reading a resource that does not exist.
+func TestRead_NonExistentResource(t *testing.T) {
+	createDB()
+
+	if err := db.Read(collection, "nonexistentfish", &onefish); err == nil {
+		t.Error("Expected error when reading non-existent resource, got nil")
+	}
+	destroySchool()
+}
+
+// Testing deleting a resource that does not exist.
+func TestDelete_NonExistentResource(t *testing.T) {
+	createDB()
+
+	if err := db.Delete(collection, "nonexistentfish"); err == nil {
+		t.Error("Expected error when deleting non-existent resource, got nil")
+	}
+	destroySchool()
+}
+
+// Testing deleting a collection that does not exist.
+func TestDelete_NonExistentCollection(t *testing.T) {
+	createDB()
+
+	// Ensure the collection does not exist
+	os.RemoveAll(db.dir + "/nonexistentcollection")
+
+	if err := db.Delete("nonexistentcollection", "somefish"); err == nil {
+		t.Error("Expected error when deleting from non-existent collection, got nil")
+	}
+	destroySchool()
+}
+
 func TestDelete(t *testing.T) {
 
 	createDB()
@@ -149,7 +205,6 @@ func TestDelete(t *testing.T) {
 	destroySchool()
 }
 
-//
 func TestDeleteall(t *testing.T) {
 
 	createDB()
